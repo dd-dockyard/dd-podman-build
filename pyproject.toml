@@ -1,0 +1,21 @@
+[project]
+name = "dd-podman-build"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [{ name = "Jordan Webb", email = "jordan@jordemort.dev" }]
+requires-python = ">=3.13.0"
+dependencies = ["typer>=0.16.0"]
+
+[project.scripts]
+dd-podman-build = "dd_podman_build.app:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.version.raw-options]
+local_scheme = "no-local-version"
