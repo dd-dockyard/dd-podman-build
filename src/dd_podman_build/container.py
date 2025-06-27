@@ -148,7 +148,7 @@ def build_container(
     tags = [tag] if tag else []
     labels = labels or []
 
-    if "DOCKER_METADATA_OUTPUT_JSON" in os.environ:
+    if os.environ.get("DOCKER_METADATA_OUTPUT_JSON", ""):
         parse_docker_metadata(tags, labels)
 
     if not len(tags):
