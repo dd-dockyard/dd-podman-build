@@ -162,9 +162,6 @@ def build_container(
     else:
         podman = partial(sh, "podman")
 
-    if rechunk and os.getuid() != 0:
-        raise Exception("rechunking must be done as root")
-
     tags = [tag] if tag else []
     labels = labels or []
 
