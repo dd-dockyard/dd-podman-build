@@ -3,11 +3,12 @@ import os
 import subprocess
 import time
 from datetime import datetime
+from functools import partial
 
 import typer
 from typing_extensions import Annotated
 
-from .utils import sh
+from .utils import find_authfile, sh
 
 app = typer.Typer()
 
@@ -43,6 +44,7 @@ def do_rechunk(tmp_tag: str, base_tag: str, rechunk_image: str | None) -> str:
     rechunk_tag = f"localhost/{base_tag}:tmp-{datetime.now().strftime('%y%m%d%H%M%S')}"
 
     _ = sh(
+        "sudo",
         "podman",
         "run",
         "--rm",
@@ -69,23 +71,18 @@ def do_rechunk(tmp_tag: str, base_tag: str, rechunk_image: str | None) -> str:
     return rechunk_tag
 
 
-def write_iidfile(tmp_tag: str, iidfile: str):
-    inspection = json.loads(
-        sh(
-            "podman",
-            "inspect",
-            tmp_tag,
-            stdout=subprocess.PIPE,
-        ).stdout
-    )
+def write_iidfile(inspection: str, iidfile: str):
+    inspection = json.loads(inspection)
     if not isinstance(inspection, list):
         raise Exception("`podman inspect` output is not a list")
     if len(inspection) > 1:
         raise Exception("`podman inspect` returrned more than one image")
-    if not isinstance(inspection[0], dict):
+
+    inspection = inspection[0]
+    if not isinstance(inspection, dict):
         raise Exception("`podman inspect` list doesn't contain a dict")
 
-    image_id = inspection[0].get("Id", None)
+    image_id = inspection.get("Id", None)
     if not isinstance(image_id, str):
         raise Exception("`podman inspect` output missing or malformed image ID")
 
@@ -125,10 +122,13 @@ def build_container(
     labels: Annotated[
         list[str] | None, typer.Option("--label", help="add label to container")
     ] = None,
-    rechunk: Annotated[bool, typer.Option(help="run rechunk after build")] = False,
+    rechunk: Annotated[
+        bool, typer.Option(help="run rechunk after build (implies sudo)")
+    ] = False,
     rechunk_image: Annotated[
         str | None, typer.Option(help="image to use for rechunking")
     ] = None,
+    sudo: Annotated[bool | None, typer.Option(help="run podman as root")] = None,
     iidfile: Annotated[
         str | None, typer.Option(help="path to write image ID to")
     ] = None,
@@ -142,6 +142,25 @@ def build_container(
     ] = None,
 ):
     """Build (and possibly rechunk, sign, or push) a container with Podman"""
+
+    if rechunk:
+        if sudo is not None and not sudo:
+            raise Exception("must sudo when rechunking")
+        sudo = True
+    else:
+        sudo = sudo or False
+
+    if sudo:
+        authfile = find_authfile()
+        if authfile:
+            podman = partial(
+                sh, "sudo", "env", f"REGISTRY_AUTH_FILE={authfile}", "podman"
+            )
+        else:
+            podman = partial(sh, "sudo", "podman")
+
+    else:
+        podman = partial(sh, "podman")
 
     if rechunk and os.getuid() != 0:
         raise Exception("rechunking must be done as root")
@@ -169,22 +188,27 @@ def build_container(
         build_argv.append(f"--target={target}")
 
     build_argv += [context]
-    _ = sh("podman", "build", *build_argv)
+    _ = podman("build", *build_argv)
 
     if rechunk:
         tmp_tag = do_rechunk(tmp_tag, base_tag, rechunk_image)
 
     if iidfile:
-        write_iidfile(tmp_tag, iidfile)
+        inspection = podman(
+            "inspect",
+            tmp_tag,
+            stdout=subprocess.PIPE,
+        ).stdout
+        write_iidfile(inspection, iidfile)
 
-    _ = sh("podman", "tag", tmp_tag, *tags)
+    _ = podman("tag", tmp_tag, *tags)
 
     if push:
         push_argv = make_push_argv(private_key, passphrase_file)
         for tag in tags:
             for tries in range(5):
                 try:
-                    _ = sh("podman", "push", *push_argv, tag)
+                    _ = podman("push", *push_argv, tag)
                     break
                 except subprocess.CalledProcessError:
                     tries_left = 5 - tries
