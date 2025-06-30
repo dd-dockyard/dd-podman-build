@@ -132,6 +132,7 @@ def build_container(
     iidfile: Annotated[
         str | None, typer.Option(help="path to write image ID to")
     ] = None,
+    cache: Annotated[bool, typer.Option(help="cache build results in registry")] = True,
     push: Annotated[bool, typer.Option(help="push image after build")] = False,
     private_key: Annotated[
         str | None, typer.Option(help="path to sigstore private key to sign with")
@@ -174,6 +175,16 @@ def build_container(
     base_tag = tags[0].split("/")[-1].split(":")[0]
     tmp_tag = f"localhost/{base_tag}:tmp-{datetime.now().strftime('%y%m%d%H%M%S')}"
     build_argv = ["--network=host", "--pull=newer", f"--tag={tmp_tag}"]
+
+    if cache:
+        registry = tags[0].split("/")[0]
+        if registry != "localhost":
+            build_argv += [
+                f"--cache-from={base_tag}-cache",
+                f"--cache-to={base_tag}-cache",
+            ]
+            if base_tag != "latest":
+                build_argv.append(f"--cache-from={tags[0].split(':')[0]}:latest-cache")
 
     for label in labels:
         build_argv.append(f"--label={label}")
