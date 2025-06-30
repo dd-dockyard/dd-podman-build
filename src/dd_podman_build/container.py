@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+import time
 from datetime import datetime
 
 import typer
@@ -181,4 +182,16 @@ def build_container(
     if push:
         push_argv = make_push_argv(private_key, passphrase_file)
         for tag in tags:
-            _ = sh("podman", "push", *push_argv, tag)
+            for tries in range(5):
+                try:
+                    _ = sh("podman", "push", *push_argv, tag)
+                    break
+                except subprocess.CalledProcessError:
+                    tries_left = 5 - tries
+                    if tries_left:
+                        print(
+                            f"*** Failed to push, will retry in 5 seconds (retries remaining: {tries_left})"
+                        )
+                        time.sleep(5)
+                    else:
+                        raise
