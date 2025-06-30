@@ -2,9 +2,11 @@ import json
 import os
 import subprocess
 from datetime import datetime
-from typing_extensions import Annotated
 
 import typer
+from typing_extensions import Annotated
+
+from .utils import sh
 
 app = typer.Typer()
 
@@ -39,30 +41,28 @@ def do_rechunk(tmp_tag: str, base_tag: str, rechunk_image: str | None) -> str:
     )
     rechunk_tag = f"localhost/{base_tag}:tmp-{datetime.now().strftime('%y%m%d%H%M%S')}"
 
-    _ = subprocess.run(
-        [
-            "podman",
-            "run",
-            "--rm",
-            "--privileged",
-            "--security-opt=label=disable",
-            "--pull=newer",
-            "-v",
-            "/var/lib/containers:/var/lib/containers",
-            "-v",
-            "/var/tmp:/var/tmp",
-            rechunk_image,
-            "rpm-ostree",
-            "compose",
-            "build-chunked-oci",
-            "--bootc",
-            "--format-version=1",
-            "--max-layers=99",
-            "--from",
-            tmp_tag,
-            "--output",
-            f"containers-storage:{rechunk_tag}",
-        ]
+    _ = sh(
+        "podman",
+        "run",
+        "--rm",
+        "--privileged",
+        "--security-opt=label=disable",
+        "--pull=newer",
+        "-v",
+        "/var/lib/containers:/var/lib/containers",
+        "-v",
+        "/var/tmp:/var/tmp",
+        rechunk_image,
+        "rpm-ostree",
+        "compose",
+        "build-chunked-oci",
+        "--bootc",
+        "--format-version=1",
+        "--max-layers=99",
+        "--from",
+        tmp_tag,
+        "--output",
+        f"containers-storage:{rechunk_tag}",
     )
 
     return rechunk_tag
@@ -70,11 +70,11 @@ def do_rechunk(tmp_tag: str, base_tag: str, rechunk_image: str | None) -> str:
 
 def write_iidfile(tmp_tag: str, iidfile: str):
     inspection = json.loads(
-        subprocess.run(
-            ["podman", "inspect", tmp_tag],
+        sh(
+            "podman",
+            "inspect",
+            tmp_tag,
             stdout=subprocess.PIPE,
-            check=True,
-            encoding="utf-8",
         ).stdout
     )
     if not isinstance(inspection, list):
@@ -168,7 +168,7 @@ def build_container(
         build_argv.append(f"--target={target}")
 
     build_argv += [context]
-    _ = subprocess.run(["podman", "build"] + build_argv, check=True)
+    _ = sh("podman", "build", *build_argv)
 
     if rechunk:
         tmp_tag = do_rechunk(tmp_tag, base_tag, rechunk_image)
@@ -176,9 +176,9 @@ def build_container(
     if iidfile:
         write_iidfile(tmp_tag, iidfile)
 
-    _ = subprocess.run(["podman", "tag", tmp_tag] + tags, check=True)
+    _ = sh("podman", "tag", tmp_tag, *tags)
 
     if push:
         push_argv = make_push_argv(private_key, passphrase_file)
         for tag in tags:
-            _ = subprocess.run(["podman", "push"] + push_argv + [tag], check=True)
+            _ = sh("podman", "push", *push_argv, tag)
