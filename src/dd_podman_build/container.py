@@ -24,10 +24,11 @@ def parse_docker_metadata(tags: list[str], labels: list[str]):
                 tags.append(metadata_tag)
 
     if "labels" in metadata:
-        if not isinstance(metadata["labels"], list):
-            raise Exception("Malformed DOCKER_METADATA_OUTPUT_JSON: labels not a list")
+        if not isinstance(metadata["labels"], dict):
+            raise Exception("Malformed DOCKER_METADATA_OUTPUT_JSON: labels not a dict")
 
-        for metadata_label in map(str, metadata["labels"]):
+        for key, value in metadata["labels"].items():
+            metadata_label = f"{key}={value}"
             if metadata_label not in tags:
                 labels.append(metadata_label)
 
