@@ -180,11 +180,9 @@ def build_container(
         registry = tags[0].split("/")[0]
         if registry != "localhost":
             build_argv += [
-                f"--cache-from={base_tag}-cache",
-                f"--cache-to={base_tag}-cache",
+                f"--cache-from={base_tag}",
+                f"--cache-to={base_tag}",
             ]
-            if base_tag != "latest":
-                build_argv.append(f"--cache-from={tags[0].split(':')[0]}:latest-cache")
 
     for label in labels:
         build_argv.append(f"--label={label}")
