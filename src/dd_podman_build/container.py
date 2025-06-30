@@ -179,9 +179,10 @@ def build_container(
     if cache:
         registry = tags[0].split("/")[0]
         if registry != "localhost":
+            cache_tag = tags[0].split(":")[0]
             build_argv += [
-                f"--cache-from={base_tag}",
-                f"--cache-to={base_tag}",
+                f"--cache-from={cache_tag}",
+                f"--cache-to={cache_tag}",
             ]
 
     for label in labels:
