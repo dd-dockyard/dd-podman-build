@@ -10,8 +10,7 @@ app = typer.Typer()
 
 
 def parse_docker_metadata(tags: list[str], labels: list[str]):
-    with open(os.environ["DOCKER_METADATA_OUTPUT_JSON"]) as metadata_in:
-        metadata = json.load(metadata_in)
+    metadata = json.loads(os.environ["DOCKER_METADATA_OUTPUT_JSON"])
 
     if not isinstance(metadata, dict):
         raise Exception("Malformed DOCKER_METADATA_OUTPUT_JSON: top-level not a dict")
