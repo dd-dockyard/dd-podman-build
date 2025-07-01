@@ -150,18 +150,6 @@ def build_container(
     else:
         sudo = sudo or False
 
-    if sudo:
-        authfile = find_authfile()
-        if authfile:
-            podman = partial(
-                sh, "sudo", "env", f"REGISTRY_AUTH_FILE={authfile}", "podman"
-            )
-        else:
-            podman = partial(sh, "sudo", "podman")
-
-    else:
-        podman = partial(sh, "podman")
-
     tags = [tag] if tag else []
     labels = labels or []
 
@@ -171,12 +159,26 @@ def build_container(
     if not len(tags):
         raise Exception("no tags specified; try passing --tag?")
 
+    if sudo:
+        authfile = find_authfile()
+        if authfile:
+            podman = partial(
+                sh, "sudo", "env", f"REGISTRY_AUTH_FILE={authfile}", "podman"
+            )
+            registry = tags[0].split("/")[0]
+            if registry != "localhost":
+                _ = podman("login", "--get-login", registry)
+        else:
+            podman = partial(sh, "sudo", "podman")
+    else:
+        podman = partial(sh, "podman")
+
     base_tag = tags[0].split("/")[-1].split(":")[0]
     tmp_tag = f"localhost/{base_tag}:tmp-{datetime.now().strftime('%y%m%d%H%M%S')}"
     build_argv = ["--network=host", "--pull=newer", f"--tag={tmp_tag}"]
 
     # if cache:
-    #    registry = tags[0].split("/")[0]
+    #
     #    if registry != "localhost":
     #        cache_tag = tags[0].split(":")[0]
     #        build_argv += [
