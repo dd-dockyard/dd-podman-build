@@ -217,7 +217,7 @@ def build_container(
                     _ = podman("push", *push_argv, tag)
                     break
                 except subprocess.CalledProcessError:
-                    tries_left = 5 - tries
+                    tries_left = 4 - tries
                     if tries_left:
                         print(
                             f"*** Failed to push, will retry in 5 seconds (retries remaining: {tries_left})"
