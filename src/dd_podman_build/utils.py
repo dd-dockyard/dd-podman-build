@@ -2,6 +2,7 @@ import os
 import shlex
 import subprocess
 import sys
+from datetime import datetime
 from functools import cache
 from pathlib import Path
 from typing import Any
@@ -25,14 +26,22 @@ def sh(*args: str, **kwargs: Any) -> subprocess.CompletedProcess[str]:
         _ = sys.stderr.write(f" + {shlex.join(args)}\n")
         _ = sys.stdout.flush()
 
+    start = datetime.now()
     try:
         return subprocess.run(args, encoding="utf-8", **merged_kwargs)
+    except subprocess.CalledProcessError as e:
+        _ = sys.stderr.write(f"+++ command failed with status {e.returncode}\n")
+        _ = sys.stderr.flush()
+        raise
     finally:
+        runtime = datetime.now() - start
         if running_in_github_actions():
             _ = sys.stderr.flush()
             _ = sys.stdout.flush()
             print("\n::endgroup::")
             _ = sys.stdout.flush()
+        _ = sys.stderr.write(f"+++ command completed in {runtime}\n")
+        _ = sys.stderr.flush()
 
 
 @cache
