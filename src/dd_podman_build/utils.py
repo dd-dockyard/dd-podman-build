@@ -32,15 +32,19 @@ def sh(*args: str, **kwargs: Any) -> subprocess.CompletedProcess[str]:
     merged_kwargs.update(kwargs)
 
     if running_in_github_actions():
-        stdout_flush_write(f"::group::{shlex.join(args)}")
+        stdout_flush_write(f"\n::group::{shlex.join(args)}")
     else:
-        stderr_flush_write(f" + {shlex.join(args)}")
+        stderr_flush_write(f"\n+ {shlex.join(args)}")
 
     start = datetime.now()
     returncode = 0
 
     try:
-        return subprocess.run(args, encoding="utf-8", **merged_kwargs)
+        cmd = subprocess.run(args, encoding="utf-8", **merged_kwargs)
+        os.sched_yield()
+        _ = sys.stdout.flush()
+        _ = sys.stderr.flush()
+        return cmd
     except subprocess.CalledProcessError as e:
         returncode = e.returncode
         raise
@@ -48,7 +52,7 @@ def sh(*args: str, **kwargs: Any) -> subprocess.CompletedProcess[str]:
         runtime = datetime.now() - start
         if running_in_github_actions():
             stdout_flush_write("\n::endgroup::")
-        stderr_flush_write(f"+++ exit status: {returncode}, runtime: {runtime}")
+        stderr_flush_write(f"\n+++ exit status: {returncode}, runtime: {runtime}")
 
 
 @cache

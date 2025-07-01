@@ -167,7 +167,10 @@ def build_container(
             )
             registry = tags[0].split("/")[0]
             if registry != "localhost":
-                _ = podman("login", "--get-login", registry)
+                login = podman(
+                    "login", "--get-login", registry, stdout=subprocess.PIPE
+                ).stdout.strip()
+                print(f"login for {registry} is {login}")
         else:
             podman = partial(sh, "sudo", "podman")
     else:
