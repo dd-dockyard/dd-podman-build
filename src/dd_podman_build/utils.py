@@ -13,24 +13,26 @@ def running_in_github_actions():
     return "GITHUB_ACTIONS" in os.environ and os.environ["GITHUB_ACTIONS"] == "true"
 
 
-def flush_stdio():
-    _ = sys.stdout.write("\n")
-    _ = sys.stdout.flush()
-    _ = sys.stderr.write("\n")
-    _ = sys.stderr.flush()
-
-
 def sh(*args: Any, **kwargs: Any) -> subprocess.CompletedProcess[str]:
     args = tuple(map(str, args))
-    merged_kwargs: dict[str, Any] = {"check": True}
+    merged_kwargs: dict[str, Any] = {
+        "check": True,
+        "stderr": sys.stderr,
+        "stdout": sys.stdout,
+    }
     merged_kwargs.update(kwargs)
 
-    flush_stdio()
+    _ = sys.stdout.write("\n")
+    _ = sys.stderr.write("\n")
+    _ = sys.stdout.flush()
+    _ = sys.stderr.flush()
 
     if running_in_github_actions():
         print(f"::group::{shlex.join(args)}")
     else:
         print(f"+++ {shlex.join(args)}")
+
+    _ = sys.stdout.flush()
 
     start = datetime.now()
     returncode = 0
@@ -43,10 +45,17 @@ def sh(*args: Any, **kwargs: Any) -> subprocess.CompletedProcess[str]:
         raise
     finally:
         runtime = datetime.now() - start
-        flush_stdio()
+
+        _ = sys.stdout.write("\n")
+        _ = sys.stderr.write("\n")
+        _ = sys.stdout.flush()
+        _ = sys.stderr.flush()
+
         if running_in_github_actions():
             print("::endgroup::")
         print(f"+++ exit status: {returncode}, runtime: {runtime}")
+
+        _ = sys.stdout.flush()
 
 
 @cache
