@@ -126,7 +126,7 @@ def do_push(podman: partial[subprocess.CompletedProcess[str]], tag: str, sign: b
     if sign:
         base_tag = tag.split(":")[0]
         digest_tag = f"{base_tag}@{digest}"
-        _ = sh("cosign", "sign", "-y", "-key", "env://COSIGN_PRIVATE_KEY", digest_tag)
+        _ = sh("cosign", "sign", "-y", "--key", "env://COSIGN_PRIVATE_KEY", digest_tag)
 
     return digest
 
