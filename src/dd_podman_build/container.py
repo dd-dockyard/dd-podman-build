@@ -1,9 +1,11 @@
 import json
 import os
 import subprocess
+import tempfile
 import time
 from datetime import datetime
 from functools import partial
+from pathlib import Path
 
 import typer
 from typing_extensions import Annotated
@@ -90,26 +92,43 @@ def write_iidfile(inspection: str, iidfile: str):
         _ = iid_out.write(image_id)
 
 
-def make_push_argv(private_key: str | None, passphrase_file: str | None) -> list[str]:
-    push_argv: list[str] = []
+def make_podman_args(sudo: bool):
+    if sudo:
+        authfile = find_authfile()
+        if authfile:
+            return partial(
+                sh, "sudo", "env", f"REGISTRY_AUTH_FILE={authfile}", "podman"
+            )
 
-    return push_argv
-    """
-    private_key = private_key or os.environ.get("SIGSTORE_PRIVATE_KEY_FILE", None)
-    passphrase_file = passphrase_file or os.environ.get(
-        "SIGSTORE_PASSPHRASE_FILE", None
-    )
+        return partial(sh, "sudo", "podman")
 
-    if private_key and passphrase_file:
-        push_argv += [
-            "--sign-by-sigstore-private-key",
-            private_key,
-            "--sign-passphrase-file",
-            passphrase_file,
-        ]
+    return partial(sh, "podman")
 
-    return push_argv
-    """
+
+def do_push(podman: partial[subprocess.CompletedProcess[str]], tag: str, sign: bool):
+    with tempfile.TemporaryDirectory() as tmp:
+        digestfile = Path(tmp) / "digest"
+        for tries_left in range(4, -1, -1):
+            try:
+                _ = podman("push", "--digestfile", digestfile, tag)
+                break
+            except subprocess.CalledProcessError:
+                if not tries_left:
+                    raise
+
+                print(
+                    f"!!! Push failed, sleeping 5 seconds (tries remaining: {tries_left})"
+                )
+                time.sleep(5)
+        with open(digestfile) as digest_in:
+            digest = digest_in.read().strip()
+
+    if sign:
+        base_tag = tag.split(":")[0]
+        digest_tag = f"{base_tag}@{digest}"
+        _ = sh("cosign", "sign", "-y", "-key", "env://COSIGN_PRIVATE_KEY", digest_tag)
+
+    return digest
 
 
 @app.command(name="container")
@@ -136,13 +155,7 @@ def build_container(
         str | None, typer.Option(help="path to write image ID to")
     ] = None,
     push: Annotated[bool, typer.Option(help="push image after build")] = False,
-    private_key: Annotated[
-        str | None, typer.Option(help="path to sigstore private key to sign with")
-    ] = None,
-    passphrase_file: Annotated[
-        str | None,
-        typer.Option(help="path to file containing passphrase to decrypt private key"),
-    ] = None,
+    sign: Annotated[bool | None, typer.Option(help="sign the container")] = None,
 ):
     """Build (and possibly rechunk, sign, or push) a container with Podman"""
 
@@ -153,6 +166,17 @@ def build_container(
     else:
         sudo = sudo or False
 
+    if sign:
+        if "COSIGN_PRIVATE_KEY" not in os.environ:
+            raise Exception("COSIGN_PRIVATE_KEY should be set")
+    elif sign is None:
+        sign = "COSIGN_PRIVATE_KEY" in os.environ
+
+    if sign and " ENCRYPTED " in os.environ["COSIGN_PRIVATE_KEY"]:
+        if "COSIGN_PASSWORD" not in os.environ:
+            raise Exception("COSIGN_PASSWORD should be set")
+
+    podman = make_podman_args(sudo)
     tags = [tag] if tag else []
     labels = labels or []
 
@@ -162,35 +186,9 @@ def build_container(
     if not len(tags):
         raise Exception("no tags specified; try passing --tag?")
 
-    if sudo:
-        authfile = find_authfile()
-        if authfile:
-            podman = partial(
-                sh, "sudo", "env", f"REGISTRY_AUTH_FILE={authfile}", "podman"
-            )
-            registry = tags[0].split("/")[0]
-            if registry != "localhost":
-                login = podman(
-                    "login", "--get-login", registry, stdout=subprocess.PIPE
-                ).stdout.strip()
-                print(f"login for {registry} is {login}")
-        else:
-            podman = partial(sh, "sudo", "podman")
-    else:
-        podman = partial(sh, "podman")
-
     base_tag = tags[0].split("/")[-1].split(":")[0]
     tmp_tag = f"localhost/{base_tag}:tmp-{datetime.now().strftime('%y%m%d%H%M%S')}"
     build_argv = ["--network=host", "--pull=newer", f"--tag={tmp_tag}"]
-
-    # if cache:
-    #
-    #    if registry != "localhost":
-    #        cache_tag = tags[0].split(":")[0]
-    #        build_argv += [
-    #            f"--cache-from={cache_tag}",
-    #            f"--cache-to={cache_tag}",
-    #        ]
 
     for label in labels:
         build_argv.append(f"--label={label}")
@@ -218,18 +216,5 @@ def build_container(
     _ = podman("tag", tmp_tag, *tags)
 
     if push:
-        push_argv = make_push_argv(private_key, passphrase_file)
         for tag in tags:
-            for tries in range(5):
-                try:
-                    _ = podman("push", *push_argv, tag)
-                    break
-                except subprocess.CalledProcessError:
-                    tries_left = 4 - tries
-                    if tries_left:
-                        print(
-                            f"*** Failed to push, will retry in 5 seconds (retries remaining: {tries_left})"
-                        )
-                        time.sleep(5)
-                    else:
-                        raise
+            do_push(podman, tag, sign)
