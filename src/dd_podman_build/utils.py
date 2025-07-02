@@ -13,17 +13,10 @@ def running_in_github_actions():
     return "GITHUB_ACTIONS" in os.environ and os.environ["GITHUB_ACTIONS"] == "true"
 
 
-def stdout_flush_write(msg: str):
-    _ = sys.stderr.flush()
+def flush_stdio():
+    _ = sys.stdout.write("\n")
     _ = sys.stdout.flush()
-    _ = sys.stdout.write(msg + "\n")
-    _ = sys.stdout.flush()
-
-
-def stderr_flush_write(msg: str):
-    _ = sys.stdout.flush()
-    _ = sys.stderr.flush()
-    _ = sys.stderr.write(msg + "\n")
+    _ = sys.stderr.write("\n")
     _ = sys.stderr.flush()
 
 
@@ -32,28 +25,28 @@ def sh(*args: Any, **kwargs: Any) -> subprocess.CompletedProcess[str]:
     merged_kwargs: dict[str, Any] = {"check": True}
     merged_kwargs.update(kwargs)
 
+    flush_stdio()
+
     if running_in_github_actions():
-        stdout_flush_write(f"\n::group::{shlex.join(args)}")
+        print(f"::group::{shlex.join(args)}")
     else:
-        stderr_flush_write(f"\n+ {shlex.join(args)}")
+        print(f"+++ {shlex.join(args)}")
 
     start = datetime.now()
     returncode = 0
 
     try:
         cmd = subprocess.run(args, encoding="utf-8", **merged_kwargs)
-        os.sched_yield()
-        _ = sys.stdout.flush()
-        _ = sys.stderr.flush()
         return cmd
     except subprocess.CalledProcessError as e:
         returncode = e.returncode
         raise
     finally:
         runtime = datetime.now() - start
+        flush_stdio()
         if running_in_github_actions():
-            stdout_flush_write("\n::endgroup::")
-        stderr_flush_write(f"\n+++ exit status: {returncode}, runtime: {runtime}")
+            print("::endgroup::")
+        print(f"+++ exit status: {returncode}, runtime: {runtime}")
 
 
 @cache
