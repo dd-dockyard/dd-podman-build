@@ -93,6 +93,8 @@ def write_iidfile(inspection: str, iidfile: str):
 def make_push_argv(private_key: str | None, passphrase_file: str | None) -> list[str]:
     push_argv: list[str] = []
 
+    return push_argv
+    """
     private_key = private_key or os.environ.get("SIGSTORE_PRIVATE_KEY_FILE", None)
     passphrase_file = passphrase_file or os.environ.get(
         "SIGSTORE_PASSPHRASE_FILE", None
@@ -107,6 +109,7 @@ def make_push_argv(private_key: str | None, passphrase_file: str | None) -> list
         ]
 
     return push_argv
+    """
 
 
 @app.command(name="container")
