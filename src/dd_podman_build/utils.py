@@ -28,7 +28,7 @@ def stderr_flush_write(msg: str):
 
 
 def sh(*args: Any, **kwargs: Any) -> subprocess.CompletedProcess[str]:
-    str_args = list(map(str, args))
+    args = tuple(map(str, args))
     merged_kwargs: dict[str, Any] = {"check": True}
     merged_kwargs.update(kwargs)
 
@@ -41,7 +41,7 @@ def sh(*args: Any, **kwargs: Any) -> subprocess.CompletedProcess[str]:
     returncode = 0
 
     try:
-        cmd = subprocess.run(str_args, encoding="utf-8", **merged_kwargs)
+        cmd = subprocess.run(args, encoding="utf-8", **merged_kwargs)
         os.sched_yield()
         _ = sys.stdout.flush()
         _ = sys.stderr.flush()
