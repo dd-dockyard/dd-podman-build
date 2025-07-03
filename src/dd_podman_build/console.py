@@ -14,5 +14,5 @@ console = Console(
 # For logs we basically don't want to wrap at all, let whatever happens happen
 log_console = Console(
     force_terminal=True if "GITHUB_ACTIONS" in os.environ else None,
-    width=65535,
+    width=4096,
 )
