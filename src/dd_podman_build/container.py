@@ -126,9 +126,8 @@ def do_push(podman: partial[subprocess.CompletedProcess[str]], tag: str, sign: b
             except subprocess.CalledProcessError:
                 if not tries_left:
                     raise
-
-                print(
-                    f"!!! Push failed, sleeping 5 seconds (tries remaining: {tries_left})"
+                logging.warning(
+                    f"push failed, sleeping 5 seconds (tries remaining: {tries_left})"
                 )
                 time.sleep(5)
         with open(digestfile) as digest_in:
@@ -194,6 +193,7 @@ def build_container(
     labels = labels or []
 
     if os.environ.get("DOCKER_METADATA_OUTPUT_JSON", ""):
+        logging.info("parsing Docker metadata from environment")
         parse_docker_metadata(tags, labels)
 
     if not len(tags):
