@@ -7,6 +7,7 @@ from functools import cache
 from io import StringIO
 from typing import IO, Any, Callable
 
+from rich.highlighter import NullHighlighter
 from rich.logging import RichHandler
 
 from .console import console, log_console
@@ -27,7 +28,11 @@ def make_logger(log_as: str, handle: str):
     keywords = RichHandler.KEYWORDS or []
     keywords.append(log_as)
     handler = RichHandler(
-        console=log_console, show_level=False, show_path=False, keywords=keywords
+        console=log_console,
+        show_level=False,
+        show_path=False,
+        keywords=keywords,
+        highlighter=NullHighlighter(),
     )
     prefix = f"{log_as} ⚠️" if handle == "stderr" else log_as
     handler.setFormatter(logging.Formatter(f"{prefix}: %(message)s", "[%X]"))
