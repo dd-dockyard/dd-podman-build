@@ -2,7 +2,7 @@ import os
 from contextlib import contextmanager
 from functools import cache
 
-from .console import console
+from .console import console, log_console
 
 
 @cache
@@ -18,7 +18,7 @@ def github_group(summary: str, heading: str | None = None):
         console.rule()
 
     if running_in_github_actions():
-        console.print(f"::group::{summary}")
+        log_console.print(f"::group::{summary}", highlight=False, markup=False)
     else:
         console.print(f"[bold]{summary}[/bold]")
         console.rule()
@@ -27,6 +27,6 @@ def github_group(summary: str, heading: str | None = None):
         yield
     finally:
         if running_in_github_actions():
-            print("::endgroup::")
+            log_console.print("::endgroup::", highlight=False, markup=False)
         else:
             console.rule()
