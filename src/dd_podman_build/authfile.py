@@ -5,6 +5,8 @@ from pathlib import Path
 
 @cache
 def find_authfile() -> Path | None:
+    """Find a file containing OCI registry credentials, if any is available"""
+
     if "REGISTRY_AUTH_FILE" in os.environ:
         env_config = Path(os.environ["REGISTRY_AUTH_FILE"])
         if env_config.exists():
