@@ -11,8 +11,8 @@ console = Console(
     width=100 if "GITHUB_ACTIONS" in os.environ else None,
 )
 
-# For logs we basically don't want to wrap under CI, let whatever happens happen
+# For logs we basically don't want to wrap at all, let whatever happens happen
 log_console = Console(
     force_terminal=True if "GITHUB_ACTIONS" in os.environ else None,
-    width=5000 if "GITHUB_ACTIONS" in os.environ else None,
+    width=65535,
 )
