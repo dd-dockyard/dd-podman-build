@@ -197,7 +197,9 @@ def build_container(
         parse_docker_metadata(tags, labels)
 
     if not len(tags):
-        raise Exception("no tags specified; try passing --tag?")
+        tags.append(
+            f"localhost/{os.environ.get('GITHUB_REPOSITORY', os.path.basename(os.getcwd()))}:latest"
+        )
 
     base_tag = tags[0].split("/")[-1].split(":")[0]
     tmp_tag = f"localhost/{base_tag}:tmp-{datetime.now().strftime('%y%m%d%H%M%S')}"
