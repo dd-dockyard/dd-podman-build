@@ -9,7 +9,7 @@ from typing import IO, Any, Callable
 
 from rich.logging import RichHandler
 
-from .console import console
+from .console import console, log_console
 from .github import github_group
 from .logging import configure_logging
 
@@ -27,7 +27,7 @@ def make_logger(log_as: str, handle: str):
     keywords = RichHandler.KEYWORDS or []
     keywords.append(log_as)
     handler = RichHandler(
-        console=console, show_level=False, show_path=False, keywords=keywords
+        console=log_console, show_level=False, show_path=False, keywords=keywords
     )
     prefix = f"{log_as} ⚠️" if handle == "stderr" else log_as
     handler.setFormatter(logging.Formatter(f"{prefix}: %(message)s", "[%X]"))

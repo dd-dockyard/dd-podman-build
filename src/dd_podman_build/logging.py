@@ -2,7 +2,7 @@ import logging
 
 from rich.logging import RichHandler
 
-from .console import console
+from .console import log_console
 
 
 def configure_logging(verbose: bool = False) -> None:
@@ -10,5 +10,7 @@ def configure_logging(verbose: bool = False) -> None:
         level=logging.DEBUG if verbose else logging.INFO,
         format="%(message)s",
         datefmt="[%X]",
-        handlers=[RichHandler(console=console, show_path=False, rich_tracebacks=True)],
+        handlers=[
+            RichHandler(console=log_console, show_path=False, rich_tracebacks=True)
+        ],
     )
