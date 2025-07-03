@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import subprocess
 import tempfile
@@ -10,12 +11,14 @@ from pathlib import Path
 import typer
 from typing_extensions import Annotated
 
-from .utils import find_authfile, sh
+from .authfile import find_authfile
+from .logging import configure_logging
+from .run import run
 
 app = typer.Typer()
 
 
-def parse_docker_metadata(tags: list[str], labels: list[str]):
+def parse_docker_metadata(tags: list[str] = [], labels: list[str] = []):
     metadata = json.loads(os.environ["DOCKER_METADATA_OUTPUT_JSON"])
 
     if not isinstance(metadata, dict):
@@ -38,6 +41,8 @@ def parse_docker_metadata(tags: list[str], labels: list[str]):
             if metadata_label not in tags:
                 labels.append(metadata_label)
 
+    return (tags, labels)
+
 
 def do_rechunk(tmp_tag: str, base_tag: str, rechunk_image: str | None) -> str:
     rechunk_image = rechunk_image or os.environ.get(
@@ -45,7 +50,7 @@ def do_rechunk(tmp_tag: str, base_tag: str, rechunk_image: str | None) -> str:
     )
     rechunk_tag = f"localhost/{base_tag}:tmp-{datetime.now().strftime('%y%m%d%H%M%S')}"
 
-    _ = sh(
+    _ = run(
         "sudo",
         "podman",
         "run",
@@ -68,6 +73,7 @@ def do_rechunk(tmp_tag: str, base_tag: str, rechunk_image: str | None) -> str:
         tmp_tag,
         "--output",
         f"containers-storage:{rechunk_tag}",
+        log_as="podman",
     )
 
     return rechunk_tag
@@ -97,12 +103,17 @@ def make_podman_args(sudo: bool):
         authfile = find_authfile()
         if authfile:
             return partial(
-                sh, "sudo", "env", f"REGISTRY_AUTH_FILE={authfile}", "podman"
+                run,
+                "sudo",
+                "env",
+                f"REGISTRY_AUTH_FILE={authfile}",
+                "podman",
+                log_as="podman",
             )
 
-        return partial(sh, "sudo", "podman")
+        return partial(run, "sudo", "podman", log_as="podman")
 
-    return partial(sh, "podman")
+    return partial(run, "podman")
 
 
 def do_push(podman: partial[subprocess.CompletedProcess[str]], tag: str, sign: bool):
@@ -126,7 +137,7 @@ def do_push(podman: partial[subprocess.CompletedProcess[str]], tag: str, sign: b
     if sign:
         base_tag = tag.split(":")[0]
         digest_tag = f"{base_tag}@{digest}"
-        _ = sh("cosign", "sign", "-y", "--key", "env://COSIGN_PRIVATE_KEY", digest_tag)
+        _ = run("cosign", "sign", "-y", "--key", "env://COSIGN_PRIVATE_KEY", digest_tag)
 
     return digest
 
@@ -156,8 +167,10 @@ def build_container(
     ] = None,
     push: Annotated[bool, typer.Option(help="push image after build")] = False,
     sign: Annotated[bool | None, typer.Option(help="sign the container")] = None,
+    verbose: Annotated[bool, typer.Option(help="be noisy")] = False,
 ):
     """Build (and possibly rechunk, sign, or push) a container with Podman"""
+    configure_logging(verbose)
 
     if rechunk:
         if sudo is not None and not sudo:
@@ -200,12 +213,15 @@ def build_container(
         build_argv.append(f"--target={target}")
 
     build_argv += [context]
+    logging.info("Building container...")
     _ = podman("build", *build_argv)
 
     if rechunk:
+        logging.info("Rechunking container...")
         tmp_tag = do_rechunk(tmp_tag, base_tag, rechunk_image)
 
     if iidfile:
+        logging.info(f"Writing iidfile {iidfile}...")
         inspection = podman(
             "inspect",
             tmp_tag,
@@ -217,4 +233,5 @@ def build_container(
 
     if push:
         for tag in tags:
+            logging.info(f"Pushing tag {tag}...")
             do_push(podman, tag, sign)

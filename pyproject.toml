@@ -5,7 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 authors = [{ name = "Jordan Webb", email = "jordan@jordemort.dev" }]
 requires-python = ">=3.13.0"
-dependencies = ["typer>=0.16.0"]
+dependencies = ["rich>=14.0.0", "typer>=0.16.0"]
 
 [project.scripts]
 dd-podman-build = "dd_podman_build.app:app"
