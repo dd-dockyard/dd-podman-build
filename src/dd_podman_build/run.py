@@ -26,7 +26,9 @@ def make_logger(log_as: str, handle: str):
 
     keywords = RichHandler.KEYWORDS or []
     keywords += [log_as, "stdout", "stderr"]
-    handler = RichHandler(show_level=False, show_path=False, keywords=keywords)
+    handler = RichHandler(
+        console=console, show_level=False, show_path=False, keywords=keywords
+    )
     handler.setFormatter(logging.Formatter(f"{log_as} {handle}: %(message)s", "[%X]"))
 
     logger = logging.getLogger(f"{log_as}.{handle}")
