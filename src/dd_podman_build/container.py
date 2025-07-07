@@ -140,7 +140,6 @@ def do_push(podman: partial[subprocess.CompletedProcess[str]], tag: str, sign: b
             "cosign",
             "sign",
             "-y",
-            "--verbose",
             "--tlog-upload=false",
             "--upload=true",
             "--record-creation-timestamp=true",
