@@ -25,17 +25,15 @@ _Default_Kwargs: dict[str, Any] = {
 def make_logger(log_as: str, handle: str):
     configure_logging()
 
-    keywords = RichHandler.KEYWORDS or []
-    keywords.append(log_as)
     handler = RichHandler(
         console=log_console,
         show_level=False,
         show_path=False,
-        keywords=keywords,
         highlighter=NullHighlighter(),
     )
-    prefix = f"{log_as} ⚠️" if handle == "stderr" else log_as
-    handler.setFormatter(logging.Formatter(f"{prefix}: %(message)s", "[%X]"))
+
+    prefix = "⚠️ " if handle == "stderr" else ""
+    handler.setFormatter(logging.Formatter(f"{prefix}%(message)s", "[%X]"))
 
     logger = logging.getLogger(f"{log_as}.{handle}")
     logger.addHandler(handler)
