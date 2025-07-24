@@ -142,15 +142,15 @@ def do_push(podman: partial[subprocess.CompletedProcess[str]], tag: str, sign: b
             "-y",
             "--tlog-upload=false",
             "--upload=true",
-            "--record-creation-timestamp=true",
-            "--recursive=true",
             f"--sign-container-identity={tag}",
-            "--timestamp-server-url=https://freetsa.org/tsr",
             "--key",
             "env://COSIGN_PRIVATE_KEY",
             digest_tag,
         )
 
+    #            "--record-creation-timestamp=true",
+    #            "--recursive=true",
+    #            "--timestamp-server-url=https://freetsa.org/tsr",
     return digest
 
 
