@@ -8,12 +8,10 @@ idiomatic_version_file_enable_tools = ["python"]
 [tools]
 uv = "latest"
 ruff = "latest"
-shellcheck = "latest"
 
 [tasks.check]
-description = "Lint / check the shell and python scripts"
+description = "Lint / check the python scripts"
 run = [
-        "git ls-files --cached --others --exclude-standard | xargs file | grep 'shell script' | cut -d ':' -f 1 | xargs shellcheck" ,
         "ruff check",
         "uv run pyright --warnings",
 ]
