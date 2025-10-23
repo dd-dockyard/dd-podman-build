@@ -7,9 +7,9 @@ import time
 from datetime import datetime
 from functools import partial
 from pathlib import Path
+from typing import Annotated
 
 import typer
-from typing_extensions import Annotated
 
 from .authfile import find_authfile
 from .logging import configure_logging

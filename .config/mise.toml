@@ -5,3 +5,21 @@ idiomatic_version_file_enable_tools = ["python"]
 
 [tools]
 uv = "latest"
+ruff = "latest"
+shellcheck = "latest"
+
+[tasks.check]
+description = "Lint / check the shell and python scripts"
+run = [
+        "git ls-files --cached --others --exclude-standard | xargs file | grep 'shell script' | cut -d ':' -f 1 | xargs shellcheck" ,
+        "ruff check",
+        "uv run pyright --warnings",
+]
+
+[tasks.format]
+description = "Format the python scripts"
+run = [
+        "bash -O extglob -O globstar -c 'uv run pyupgrade --py313-plus @(clutch|src)/**/*.py?(i)'",
+        "isort clutch src",
+        "ruff format",
+]
