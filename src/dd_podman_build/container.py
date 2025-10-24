@@ -163,7 +163,7 @@ def build_container(
         str | None, typer.Option("-f", "--filename", help="path to Dockerfile")
     ] = None,
     build_args: Annotated[
-        list[str] | None, typer.Option(help="build arguments")
+        list[str] | None, typer.Option("--build-args", help="build arguments")
     ] = None,
     tag: Annotated[str | None, typer.Option(help="tag to use for built image")] = None,
     target: Annotated[str | None, typer.Option(help="target to build")] = None,
