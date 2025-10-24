@@ -223,7 +223,7 @@ def build_container(
     build_argv = ["--network=host", "--pull=newer", f"--tag={tmp_tag}"]
 
     for build_arg in build_args:
-        build_argv.append(f"--build-arg {build_arg}")
+        build_argv.append(f"--build-arg={build_arg}")
 
     for label in labels:
         build_argv.append(f"--label={label}")
