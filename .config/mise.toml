@@ -19,7 +19,5 @@ run = [
 [tasks.format]
 description = "Format the python scripts"
 run = [
-        "bash -O extglob -O globstar -c 'uv run pyupgrade --py313-plus @(src)/**/*.py?(i)'",
-        "isort src",
         "ruff format",
 ]
