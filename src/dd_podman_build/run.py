@@ -2,10 +2,11 @@ import logging
 import shlex
 import subprocess
 import threading
+from collections.abc import Callable
 from datetime import datetime
 from functools import cache
 from io import StringIO
-from typing import IO, Any, Callable
+from typing import IO, Any
 
 from rich.highlighter import NullHighlighter
 from rich.logging import RichHandler

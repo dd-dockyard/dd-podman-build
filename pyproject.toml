@@ -19,3 +19,18 @@ source = "vcs"
 
 [tool.hatch.version.raw-options]
 local_scheme = "no-local-version"
+
+[tool.pyright]
+pythonVersion = "3.13"
+include = ["src"]
+
+reportImportCycles = true
+reportUnnecessaryTypeIgnoreComment = true
+
+[tool.ruff]
+respect-gitignore = true
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.401",
+]

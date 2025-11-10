@@ -7,9 +7,9 @@ import time
 from datetime import datetime
 from functools import partial
 from pathlib import Path
+from typing import Annotated
 
 import typer
-from typing_extensions import Annotated
 
 from .authfile import find_authfile
 from .logging import configure_logging
@@ -162,6 +162,9 @@ def build_container(
     filename: Annotated[
         str | None, typer.Option("-f", "--filename", help="path to Dockerfile")
     ] = None,
+    build_args: Annotated[
+        list[str] | None, typer.Option("--build-args", help="build arguments")
+    ] = None,
     tag: Annotated[str | None, typer.Option(help="tag to use for built image")] = None,
     target: Annotated[str | None, typer.Option(help="target to build")] = None,
     labels: Annotated[
@@ -203,6 +206,7 @@ def build_container(
 
     podman = make_podman_args(sudo)
     tags = [tag] if tag else []
+    build_args = build_args or []
     labels = labels or []
 
     if os.environ.get("DOCKER_METADATA_OUTPUT_JSON", ""):
@@ -217,6 +221,9 @@ def build_container(
     base_tag = tags[0].split("/")[-1].split(":")[0]
     tmp_tag = f"localhost/{base_tag}:tmp-{datetime.now().strftime('%y%m%d%H%M%S')}"
     build_argv = ["--network=host", "--pull=newer", f"--tag={tmp_tag}"]
+
+    for build_arg in build_args:
+        build_argv.append(f"--build-arg={build_arg}")
 
     for label in labels:
         build_argv.append(f"--label={label}")
